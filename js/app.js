@@ -1,6 +1,6 @@
-// js/app.js — video al frente y UI tras terminar, + interfaz XRD con zoom
+// js/app.js — añade transición suave: fade-out video + fade-in UI
 (() => {
-  /********* Parte A: manejo del video inicial (VIDEO AL FRENTE) *********/
+  /********* Parte A: manejo del video inicial (VIDEO AL FRENTE con fade) *********/
   const video = document.getElementById('bgVideo');
   const overlay = document.getElementById('videoOverlay');
   const playBtn = document.getElementById('playBtn');
@@ -9,82 +9,123 @@
   const sidePanel = document.getElementById('sidePanel');
   const mainArea = document.getElementById('mainArea');
 
-  // Aseguramos que el video esté visible y en el frente al cargar
+  // ensure video is on front
   if (video) {
-    video.style.zIndex = 1000;       // en frente
+    video.style.zIndex = 1000;
     video.style.display = 'block';
+    video.classList.remove('fade-out');
   }
-  // overlay debe estar sobre el video
-  if (overlay) overlay.style.zIndex = 1100;
+  if (overlay) overlay.classList.add('hidden');
 
-  // Mostrar UI principal (oculta video)
-  function showMainUI() {
-    try { video.pause(); } catch(e){}
-    // ocultamos el video para que NO quede visible ni interfiera
-    if (video) {
-      video.style.display = 'none';
-      // opcional: si prefieres removerlo del DOM:
-      // video.remove();
+  // helper: fade-in UI elements (adds ui-visible and removes ui-hidden)
+  function fadeInUI() {
+    [topbar, sidePanel, mainArea].forEach(el => {
+      if (!el) return;
+      el.classList.remove('ui-hidden');
+      el.classList.add('ui-visible');
+    });
+  }
+  // helper: hide UI instantly (used on init)
+  function hideUIInstant() {
+    [topbar, sidePanel, mainArea].forEach(el => {
+      if (!el) return;
+      el.classList.add('ui-hidden');
+      el.classList.remove('ui-visible');
+    });
+  }
+
+  // call at start
+  hideUIInstant();
+
+  // Show main UI with fade: fade the video out, then reveal UI when transition ends
+  function fadeOutVideoAndShowUI() {
+    if (!video) {
+      fadeInUI();
+      return;
     }
-    overlay.classList.add('hidden');
-    topbar.classList.remove('hidden');
-    sidePanel.classList.remove('hidden');
-    mainArea.classList.remove('hidden');
-    // en caso de que el usuario estuviera en fullscreen, salir de fullscreen opcionalmente
-    if (document.fullscreenElement) {
-      try { document.exitFullscreen(); } catch(e){ /* noop */ }
-    }
+    // start fading out overlay too
+    if (overlay) overlay.classList.add('hidden');
+
+    // add fade-out class to video (CSS handles transition)
+    video.classList.add('fade-out');
+
+    // wait for transitionend to then hide video and show UI
+    const onTransitionEnd = (ev) => {
+      if (ev.propertyName === 'opacity') {
+        // remove listener
+        video.removeEventListener('transitionend', onTransitionEnd);
+        // hide video element so it won't block interactability
+        try { video.style.display = 'none'; } catch(e){}
+        // if fullscreen, try to exit (so UI is visible normally)
+        if (document.fullscreenElement) {
+          try { document.exitFullscreen(); } catch(e){}
+        }
+        // show UI
+        fadeInUI();
+      }
+    };
+    video.addEventListener('transitionend', onTransitionEnd);
+  }
+
+  // Mostrar UI principal (sin animación de video) — fallback
+  function showMainUIInstant() {
+    if (video) try { video.pause(); video.style.display = 'none'; } catch(e){}
+    if (overlay) overlay.classList.add('hidden');
+    fadeInUI();
   }
 
   // Intentar autoplay
   function tryAutoplay() {
-    if (!video) { showMainUI(); return; }
+    if (!video) { showMainUIInstant(); return; }
     const promise = video.play();
     if (promise !== undefined) {
-      promise.then(() => { overlay.classList.add('hidden'); })
-             .catch(() => { overlay.classList.remove('hidden'); });
+      promise.then(() => {
+        // autoplay OK — overlay hidden
+        if (overlay) overlay.classList.add('hidden');
+      }).catch(() => {
+        // Autoplay bloqueado -> show overlay (with fade)
+        if (overlay) overlay.classList.remove('hidden');
+      });
     } else {
-      setTimeout(()=> overlay.classList.add('hidden'), 300);
+      setTimeout(()=> overlay && overlay.classList.add('hidden'), 300);
     }
   }
 
-  // Botones overlay
+  // overlay buttons
   async function playAndFullscreen() {
     try {
       await video.play();
-      // Pedimos fullscreen: el usuario dio click, así que debe permitírselo
       const el = document.documentElement;
       if (el.requestFullscreen) await el.requestFullscreen();
     } catch(e){ console.warn(e); }
-    overlay.classList.add('hidden');
+    // hide overlay smoothly
+    if (overlay) overlay.classList.add('hidden');
   }
   async function playNoFullscreen() {
     try { await video.play(); } catch(e){ console.warn(e); }
-    overlay.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
   }
 
   playBtn && playBtn.addEventListener('click', playAndFullscreen);
   playNoFsBtn && playNoFsBtn.addEventListener('click', playNoFullscreen);
 
-  // Cuando el video termine -> mostrar UI (y ocultar video)
+  // When video ends: fade it out and show UI
   if (video) {
     video.addEventListener('ended', () => {
-      showMainUI();
+      fadeOutVideoAndShowUI();
     });
-    // si prefieres ocultarlo tras N segundos aunque no termine, descomenta y ajusta:
-    // setTimeout(()=>{ if (!video.paused) { video.pause(); showMainUI(); } }, 8000);
+    // Example: if you want to auto-hide earlier (e.g., 8s), uncomment:
+    // setTimeout(()=>{ if (!video.paused) { video.pause(); fadeOutVideoAndShowUI(); } }, 8000);
   }
 
-  // reintento cuando el usuario interactúe
+  // If user interacts, retry autoplay
   function onFirstUserInteraction(){ tryAutoplay(); window.removeEventListener('click', onFirstUserInteraction); }
   window.addEventListener('click', onFirstUserInteraction);
   tryAutoplay();
 
-  /********* Parte B: interfaz XRD y gráfica con Chart.js + zoom *********/
-  // ---- (aquí va exactamente la misma lógica XRD/Chart.js que en versiones anteriores) ----
-  // Para no repetir demasiado, copio la implementación completa tal como antes:
-  // (parseo .asr, smoothing, baseline, detectPeaks, estimateGaussian, refineGaussian, createChart, overlayPeaksAndFits, wiring UI)
-  // --- INICIO implementación XRD ---
+  /********* Parte B: interfaz XRD y gráfica con Chart.js + zoom (sin cambios funcionales) *********/
+  // ---------- UI wiring and XRD logic (same as earlier implementation) ----------
+  // Elements
   const fileInput = document.getElementById('fileInput');
   const fileNameLabel = document.getElementById('fileName');
   const logEl = document.getElementById('log');
@@ -107,10 +148,12 @@
   const resetZoomBtn = document.getElementById('resetZoom');
   const sendUrl = '/.netlify/functions/refine';
 
-  const log = (s) => { logEl.textContent = `[${new Date().toLocaleTimeString()}] ${s}\n` + logEl.textContent; };
+  const log = (s) => { if (logEl) logEl.textContent = `[${new Date().toLocaleTimeString()}] ${s}\n` + logEl.textContent; };
 
+  // Data
   let rawX = [], rawY = [], procY = [], baseline = null, peaks = [], selectedPeak = null, chart = null;
 
+  // Utils (parsing, smoothing, baseline, peaks, gaussian, refine) - same implementations
   function parseTextToXY(txt) {
     const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l && !/^#/.test(l));
     const xs=[], ys=[];
@@ -123,7 +166,6 @@
     }
     return { xs, ys };
   }
-
   function smoothArray(arr, windowSize){
     const w = Math.max(1,Math.floor(windowSize));
     if (w<=1) return arr.slice();
@@ -131,7 +173,6 @@
     for (let i=0;i<n;i++){ let s=0,c=0; for (let j=i-half;j<=i+half;j++){ if (j>=0 && j<n){s+=arr[j]; c++;}} out[i]=s/c; }
     return out;
   }
-
   function baselinePolyFit(x,y,deg=2){
     const n=x.length; const m=deg+1;
     const A=new Array(m).fill(0).map(()=>new Array(m).fill(0)); const b=new Array(m).fill(0);
@@ -151,18 +192,16 @@
     }
     const coeffs=new Array(m).fill(0); for (let i=0;i<m;i++) coeffs[i]=A[i][m]; return coeffs;
   }
-
   function evaluatePoly(coeffs,x){ let s=0,p=1; for(let i=0;i<coeffs.length;i++){ s+=coeffs[i]*p; p*=x;} return s; }
-
   function detectPeaks(y, opts={thresholdFactor:0.2,minDistance:3}){
-    const out=[]; const n=y.length; const mean=y.reduce((a,b)=>a+b,0)/n; const thr=Math.max(0, mean*opts.thresholdFactor);
+    const out=[]; if (!y || y.length===0) return out;
+    const n=y.length; const mean=y.reduce((a,b)=>a+b,0)/n; const thr=Math.max(0, mean*opts.thresholdFactor);
     for (let i=1;i<n-1;i++){ if (y[i]>y[i-1] && y[i]>y[i+1] && y[i]>=thr){
       if (out.length && Math.abs(i-out[out.length-1].index)<opts.minDistance){
         if (y[i]>out[out.length-1].y) out[out.length-1]={index:i,y:y[i]};
       } else out.push({index:i,y:y[i]});
     } } return out;
   }
-
   function estimateGaussian(xArr,yArr,idx){
     const x0=xArr[idx]; const amp=yArr[idx]; const half=amp/2;
     let left=idx,right=idx;
@@ -172,9 +211,7 @@
     const sigma = fwhm/(2*Math.sqrt(2*Math.log(2))) || 0.5;
     return {amp,x0,sigma};
   }
-
   function gaussian(x,amp,x0,sigma){ return amp*Math.exp(-0.5*Math.pow((x-x0)/sigma,2)); }
-
   function refineGaussian(xArr,yArr,init,windowRadius=12){
     let idx=0,best=Infinity;
     for (let i=0;i<xArr.length;i++){ const d=Math.abs(xArr[i]-init.x0); if (d<best){best=d;idx=i;} }
@@ -201,6 +238,7 @@
     return {amp,x0,sigma};
   }
 
+  // Chart creation with grid and zoom plugin
   function createChart(x, y){
     if (chart) chart.destroy();
     try { Chart.register(chartjsPluginZoom); } catch(e){}
@@ -244,10 +282,10 @@
     chart.update('none');
   }
 
-  smoothWindow.addEventListener('input', ()=>{ smoothVal.textContent = smoothWindow.value; });
-  peakThresh.addEventListener('input', ()=>{ peakThreshVal.textContent = parseFloat(peakThresh.value).toFixed(2); });
+  smoothWindow && smoothWindow.addEventListener('input', ()=>{ const el = document.getElementById('smoothVal'); if(el) el.textContent = smoothWindow.value; });
+  peakThresh && peakThresh.addEventListener('input', ()=>{ const el = document.getElementById('peakThreshVal'); if(el) el.textContent = parseFloat(peakThresh.value).toFixed(2); });
 
-  togglePanel && togglePanel.addEventListener('click', ()=> { sidePanel.style.display = (sidePanel.style.display === 'none') ? 'block' : 'none'; });
+  togglePanel && togglePanel.addEventListener('click', ()=> { if (sidePanel) sidePanel.style.display = (sidePanel.style.display === 'none') ? 'block' : 'none'; });
 
   fileInput && fileInput.addEventListener('change', async (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -302,6 +340,7 @@
 
   function updatePeakInfo(){
     const peakInfo = document.getElementById('peakInfo');
+    if (!peakInfo) return;
     if (!selectedPeak) peakInfo.textContent = 'Ningún pico seleccionado';
     else {
       const p = selectedPeak;
@@ -337,6 +376,7 @@
     else log('No se pudo resetear zoom (plugin no registrado)');
   });
 
-  createChart([0,1],[0,0]); log('Interfaz lista. El video de introducción se reproduce al inicio.');
-  // --- FIN implementación XRD ---
+  // init empty chart
+  createChart([0,1],[0,0]);
+  log('Interfaz lista. El video de introducción se reproduce al inicio.');
 })();
