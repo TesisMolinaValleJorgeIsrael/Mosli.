@@ -12,13 +12,13 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- VIDEO: reproduce una sola vez al inicio; ocupa todo el viewport -->
+  <!-- VIDEO: reproduce una sola vez al inicio; ocupa todo el viewport y está en el frente -->
   <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="auto">
     <source src="static/anima.mp4" type="video/mp4" />
     Tu navegador no soporta video HTML5.
   </video>
 
-  <!-- Overlay (si autoplay es bloqueado) -->
+  <!-- Overlay (si autoplay es bloqueado) - encima del video -->
   <div id="videoOverlay" class="video-overlay hidden">
     <div class="overlay-card">
       <p>Presiona para reproducir la introducción</p>
@@ -96,7 +96,6 @@
   </aside>
 
   <main id="mainArea" class="main hidden">
-    <!-- La tarjeta blanca que pediste -->
     <div class="canvas-card white-card">
       <div class="canvas-header">
         <h2>Patrón XRD</h2>
