@@ -5,20 +5,32 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>XRD Mini-FullProf — Frontend</title>
 
-  <!-- Chart.js para graficar -->
+  <!-- Chart.js (para graficar) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- Video de fondo (autoplay requiere muted) -->
-  <video id="bgVideo" class="bg-video" autoplay muted playsinline loop>
+  <!-- Video de inicio (se reproduce UNA vez) -->
+  <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="auto">
     <source src="static/anima.mp4" type="video/mp4" />
     Tu navegador no soporta video HTML5.
   </video>
 
-  <!-- Bar superior -->
-  <header class="topbar">
+  <!-- Overlay que aparece si autoplay es bloqueado -->
+  <div id="videoOverlay" class="video-overlay hidden">
+    <div class="overlay-card">
+      <p>Presiona para reproducir el video de introducción</p>
+      <div class="overlay-actions">
+        <button id="playBtn" class="primary">Reproducir (Pantalla completa)</button>
+        <button id="playNoFsBtn" class="secondary">Reproducir (sin pantalla completa)</button>
+      </div>
+      <small class="muted">Si el video no inicia automáticamente, pulsa aquí.</small>
+    </div>
+  </div>
+
+  <!-- Barra superior (oculta hasta que termine el video) -->
+  <header id="topbar" class="topbar hidden">
     <button id="togglePanel" class="icon-btn">☰</button>
     <h1>XRD Refinement Studio — Mini-FullProf</h1>
     <div class="right">
@@ -27,8 +39,8 @@
     </div>
   </header>
 
-  <!-- Panel lateral -->
-  <aside id="sidePanel" class="sidepanel">
+  <!-- Panel lateral (oculto hasta que termine el video) -->
+  <aside id="sidePanel" class="sidepanel hidden">
     <section class="panel-section">
       <h2>Archivo</h2>
       <input id="fileInput" type="file" accept=".asr,.txt,.xy" />
@@ -82,8 +94,8 @@
     <footer class="muted small">Frontend para pruebas. Backend en Netlify para procesamiento avanzado.</footer>
   </aside>
 
-  <!-- Contenedor principal -->
-  <main class="main">
+  <!-- Contenedor principal (oculto hasta que termine el video) -->
+  <main id="mainArea" class="main hidden">
     <div class="canvas-card">
       <canvas id="xrdChart" width="1200" height="600"></canvas>
     </div>
