@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mi sitio con Netlify Functions</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color: #0b243b; background:#f7fbff; }
+    body { margin:0; display:flex; align-items:center; justify-content:center; height:100vh; }
+    .card { background:white; padding:2rem; border-radius:12px; box-shadow: 0 6px 20px rgba(11,36,59,0.08); max-width:480px; width:90%; text-align:center; }
+    button { padding:0.6rem 1rem; font-size:1rem; border-radius:8px; border:0; cursor:pointer; }
+    .result { margin-top:1rem; font-weight:600; color:#0b243b; }
+    .small { font-size:0.85rem; color:#546e7a; margin-top:0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hola — prueba el backend</h1>
+    <p class="small">Haz click para pedir un mensaje al backend (Netlify Function / API)</p>
+    <button id="callBtn">Pedir mensaje al backend</button>
+    <div id="result" class="result" aria-live="polite"></div>
+    <p class="small">Si vas a usar un servidor Python distinto, cambia <code>API_URL</code> en este archivo.</p>
+  </div>
+
+  <script>
+    // Cambia aquí si tu backend está en otra URL (ej: https://mi-api.example.com/api/hello)
+    const API_URL = '/.netlify/functions/hello';
+
+    const btn = document.getElementById('callBtn');
+    const result = document.getElementById('result');
+
+    btn.addEventListener('click', async () => {
+      result.textContent = 'Cargando...';
+      try {
+        const resp = await fetch(API_URL);
+        if (!resp.ok) throw new Error('Respuesta ' + resp.status);
+        const data = await resp.json();
+        result.textContent = data.message || JSON.stringify(data);
+      } catch (err) {
+        result.textContent = 'Error: ' + err.message + '. Revisa la consola.';
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
