@@ -1,14 +1,96 @@
-/* styles.css (mejorado) */
+/* styles.css (corregido y con botones azules) */
 :root{
-  --accent:#4fc3f7;
+  --accent:#1e88e5;  /* azul */
+  --accent-2:#42a5f5;
   --bgglass: rgba(10,10,12,0.55);
   --panel-w: 360px;
   --radius:12px;
 }
 
+/* utilidad */
+.hidden { display: none !important; }
+
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#000;color:#fff}
-.bg-video{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:brightness(0.5)}
+
+/* Video: ocupa toda la ventana visualmente */
+.bg-video{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -2;
+  background: black;
+  filter: brightness(0.7);
+}
+
+/* Overlay para pedir interacción si autoplay falla */
+.video-overlay{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  background: rgba(0,0,0,0.45);
+}
+
+.video-overlay.hidden{ display: none; }
+
+.overlay-card{
+  background: rgba(10,10,12,0.92);
+  padding: 18px;
+  border-radius: 12px;
+  text-align: center;
+  color: #fff;
+  min-width: 280px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+
+.overlay-actions{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+
+button{
+  appearance:none;
+  border:0;
+  padding:8px 10px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+  color:#fff;
+  background: var(--accent);
+}
+
+/* Small buttons (sidebar) */
+.small{
+  padding:6px 8px;
+  font-size:0.87rem;
+  border-radius:8px;
+  background: linear-gradient(180deg,var(--accent),var(--accent-2));
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Primary style (azul más marcado) */
+.primary{
+  background: linear-gradient(90deg,var(--accent),var(--accent-2));
+  color: #fff;
+  border: none;
+  padding:8px 12px;
+  border-radius:8px;
+}
+
+/* Secondary (pocas acciones) */
+.secondary{
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  border-radius:8px;
+  padding:8px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Topbar */
 .topbar{
   position:fixed;left:0;right:0;top:0;height:56px;padding:8px 16px;display:flex;align-items:center;gap:12px;
   background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
@@ -18,23 +100,22 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-s
 .icon-btn{font-size:1.1rem;padding:8px;border-radius:8px;border:0;background:transparent;color:var(--accent);cursor:pointer}
 .topbar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
 
+/* Sidebar */
 .sidepanel{
   position:fixed;left:16px;top:76px;width:var(--panel-w);padding:12px;border-radius:var(--radius);
   background:var(--bgglass);box-shadow:0 10px 30px rgba(0,0,0,0.6);z-index:18;max-height:calc(100% - 96px);overflow:auto;
 }
 .panel-section{margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:8px}
 .panel-section h2{margin:0 0 8px 0;font-size:0.95rem}
-.muted{opacity:0.7}
-.small{font-size:0.85rem;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-.primary{background:linear-gradient(90deg,var(--accent),#6ee7b7);color:#012;padding:8px 10px;border-radius:8px;border:0}
+.muted{opacity:0.75}
+.small{font-size:0.85rem;padding:6px 8px;border-radius:8px}
 
+/* Main layout */
 .main{margin-top:72px;margin-left:400px;padding:20px;display:flex;gap:18px;align-items:flex-start}
 .canvas-card{flex:1;background:rgba(0,0,0,0.24);padding:14px;border-radius:10px;backdrop-filter: blur(4px);box-shadow:0 6px 20px rgba(0,0,0,0.6)}
 .results-panel{width:380px;background:rgba(0,0,0,0.22);padding:12px;border-radius:10px;max-height:70vh;overflow:auto}
-
 .row{display:flex;gap:8px;align-items:center}
 .row.between{display:flex;justify-content:space-between;align-items:center}
-
 .log{white-space:pre-wrap;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;min-height:120px}
 
 /* Responsive */
