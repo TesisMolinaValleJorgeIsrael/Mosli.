@@ -258,7 +258,7 @@
         plugins: {
           legend:{ display:true, labels:{ color:'#222' } },
           tooltip:{ callbacks:{ title: ctx => `2θ = ${ctx[0].label}`, label: ctx => `I = ${ctx[0].formattedValue}` } },
-          zoom:{ zoom:{ wheel:{enabled:true,speed:0.1}, pinch:{enabled:true}, mode:'x' }, pan:{ enabled:true, mode:'x' } }
+          zoom:{ zoom:{ wheel:{enabled:true,speed:0.1}, pinch:{enabled:true}, mode:'x' }, pan:{ enabled:true, mode:'x', drag:true } }
         },
         onClick: (evt) => {
           const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect:false }, false);
