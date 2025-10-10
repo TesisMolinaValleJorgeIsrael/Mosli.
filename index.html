@@ -1,290 +1,99 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mosli — XRD quick-refine</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
-<style>
-  html,body { height:100%; margin:0; font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:#061223; color:#e6eef8; }
-  /* video full screen */
-  #introVideo { position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:9999; background:black; }
-  /* app container hidden until video ends */
-  #app { display:none; padding:20px; max-width:1100px; margin:36px auto; }
-  .card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:16px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
-  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-  input[type=file] { color:transparent; }
-  button { background:#0b81ff; border:none; padding:10px 14px; border-radius:8px; color:white; cursor:pointer; }
-  pre { background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; overflow:auto; max-height:160px; }
-  canvas { background:#ffffff; border-radius:8px; }
-  footer { margin-top:18px; color:#9fb6da; font-size:13px; text-align:right; }
-  .small { font-size:13px; color:#9fb6da; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>XRD Mini-FullProf — Frontend</title>
+
+  <!-- Chart.js para graficar -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- Video de fondo (autoplay requiere muted) -->
+  <video id="bgVideo" class="bg-video" autoplay muted playsinline loop>
+    <source src="static/anima.mp4" type="video/mp4" />
+    Tu navegador no soporta video HTML5.
+  </video>
 
-<!-- VIDEO full screen -->
-<video id="introVideo" autoplay muted playsinline>
-  <!-- cambia la ruta si pones anima.mp4 en otra carpeta -->
-  <source src="anima.mp4" type="video/mp4">
-  Tu navegador no soporta video.
-</video>
+  <!-- Bar superior -->
+  <header class="topbar">
+    <button id="togglePanel" class="icon-btn">☰</button>
+    <h1>XRD Refinement Studio — Mini-FullProf</h1>
+    <div class="right">
+      <button id="exportJson" class="small">Export JSON</button>
+      <button id="sendBackend" class="primary small">Enviar a Netlify</button>
+    </div>
+  </header>
 
-<!-- APP: aparece después del video -->
-<div id="app" class="card" role="main" aria-live="polite">
-  <h1>Mosli — XRD quick-refine (demo)</h1>
-  <p class="small">Sube un archivo <strong>.asr</strong> (dos columnas: 2θ y intensidad) y pulsa "Analizar".</p>
+  <!-- Panel lateral -->
+  <aside id="sidePanel" class="sidepanel">
+    <section class="panel-section">
+      <h2>Archivo</h2>
+      <input id="fileInput" type="file" accept=".asr,.txt,.xy" />
+      <div id="fileName" class="muted small">Ningún archivo seleccionado</div>
+    </section>
 
-  <div class="row" style="margin-top:10px;">
-    <input id="fileInput" type="file" accept=".asr,.txt" />
-    <button id="analyzeBtn">Analizar (local)</button>
-    <button id="sendNetlifyBtn">Enviar a Netlify (si está desplegado)</button>
-    <button id="downloadPyBtn">Descargar Mosli.py</button>
-  </div>
+    <section class="panel-section">
+      <h2>Preprocesado</h2>
+      <label>Smooth (ventana)</label>
+      <input id="smoothWindow" type="range" min="1" max="51" step="2" value="5" />
+      <div class="row between">
+        <small>Window: <span id="smoothVal">5</span></small>
+        <button id="applySmooth" class="small">Aplicar</button>
+      </div>
 
-  <div style="margin-top:16px;" class="row">
-    <div style="flex:1" class="card">
-      <h3>Vista previa de datos</h3>
-      <pre id="preview">Ningún archivo cargado.</pre>
+      <label>Baseline (polynomial deg)</label>
+      <select id="baselineDeg">
+        <option value="0">0 (offset)</option>
+        <option value="1">1 (linear)</option>
+        <option value="2" selected>2 (quadrática)</option>
+      </select>
+      <div class="row between">
+        <button id="applyBaseline" class="small">Restar baseline</button>
+        <button id="resetBaseline" class="small">Reset</button>
+      </div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Detección de picos</h2>
+      <label>Umbral relativo</label>
+      <input id="peakThresh" type="range" min="0" max="2" step="0.01" value="0.2" />
+      <div class="row between">
+        <small>Factor: <span id="peakThreshVal">0.20</span></small>
+        <button id="detectPeaks" class="small">Detectar</button>
+      </div>
+      <div class="muted small">Clic en un pico para seleccionarlo y ajustar / refinar.</div>
+    </section>
+
+    <section class="panel-section">
+      <h2>Fit (seleccionado)</h2>
+      <div id="peakInfo" class="muted small">Ningún pico seleccionado</div>
+      <div class="row">
+        <button id="estimatePeak" class="small">Estim. automática</button>
+        <button id="fitPeak" class="small">Ajustar (refinar)</button>
+      </div>
+      <div class="row">
+        <button id="downloadPNG" class="small">Descargar gráfico</button>
+      </div>
+    </section>
+
+    <footer class="muted small">Frontend para pruebas. Backend en Netlify para procesamiento avanzado.</footer>
+  </aside>
+
+  <!-- Contenedor principal -->
+  <main class="main">
+    <div class="canvas-card">
+      <canvas id="xrdChart" width="1200" height="600"></canvas>
     </div>
 
-    <div style="flex:2" class="card">
-      <h3>Gráfica I vs 2θ</h3>
-      <canvas id="chart" width="700" height="300"></canvas>
+    <div id="resultsPanel" class="results-panel">
+      <h3>Resultados / Log</h3>
+      <pre id="log" class="log">Cargue un archivo .asr para comenzar.</pre>
     </div>
-  </div>
+  </main>
 
-  <div style="margin-top:12px;" class="card">
-    <h3>Resultados (detección básica de picos)</h3>
-    <pre id="results">Esperando análisis...</pre>
-  </div>
-
-  <footer>Frontend: GitHub Pages • Backend (opc.): Netlify Functions (.netlify/functions/refine)</footer>
-</div>
-
-<!-- dependencias: Chart.js (para plot) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-<script>
-// --- Helper: parse .asr/text file (expect 2 columnas numéricas, tolera tabs/spaces/comma) ---
-function parseASR(text) {
-  const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l && !/^#/.test(l));
-  const xs = [], ys = [];
-  for (const line of lines) {
-    // acepta separadores: espacio(s), tab, comma
-    const parts = line.split(/[\s,]+/).filter(Boolean);
-    if (parts.length < 2) continue;
-    const x = parseFloat(parts[0]), y = parseFloat(parts[1]);
-    if (!isFinite(x) || !isFinite(y)) continue;
-    xs.push(x); ys.push(y);
-  }
-  return { xs, ys };
-}
-
-// --- smoothing: moving average ---
-function smooth(arr, window=3) {
-  const out = new Array(arr.length).fill(0);
-  for (let i=0;i<arr.length;i++){
-    let s=0,c=0;
-    for (let j=Math.max(0,i-Math.floor(window/2)); j<=Math.min(arr.length-1,i+Math.floor(window/2)); j++){
-      s += arr[j]; c++;
-    }
-    out[i] = s/c;
-  }
-  return out;
-}
-
-// --- peak detection (simple): localizar máximos locales sobre umbral relativo ---
-function detectPeaks(xs, ys) {
-  if (xs.length < 5) return [];
-  const ySmooth = smooth(ys, 5);
-  // baseline estimate = median
-  const sorted = [...ySmooth].sort((a,b)=>a-b);
-  const med = sorted[Math.floor(sorted.length/2)];
-  const thresh = med + (Math.max(...ySmooth)-med) * 0.12; // 12% sobre baseline -> configurable
-  const peaks = [];
-  for (let i=1;i<ySmooth.length-1;i++){
-    if (ySmooth[i] > ySmooth[i-1] && ySmooth[i] > ySmooth[i+1] && ySmooth[i] > thresh) {
-      // refine peak: find left/right indices where y drops below half-height
-      const peakY = ySmooth[i];
-      const half = peakY/2;
-      let left=i, right=i;
-      while (left>0 && ySmooth[left] > half) left--;
-      while (right<ySmooth.length-1 && ySmooth[right] > half) right++;
-      // compute area (trapezoid) between left..right using original ys
-      let area = 0;
-      for (let k=Math.max(0,left); k<Math.min(ys.length-1,right); k++){
-        area += 0.5 * (ys[k]+ys[k+1]) * (xs[k+1]-xs[k]);
-      }
-      // estimate FWHM = xs[right]-xs[left] (approx)
-      const fwhm = xs[Math.min(xs.length-1,right)] - xs[Math.max(0,left)];
-      peaks.push({
-        index: i,
-        twoTheta: xs[i],
-        intensity: ys[i],
-        fwhm: Math.abs(fwhm),
-        area: Math.abs(area)
-      });
-    }
-  }
-  // reduce peaks too close (merge)
-  const merged = [];
-  peaks.sort((a,b)=>a.twoTheta-b.twoTheta);
-  for (const p of peaks) {
-    if (merged.length===0) { merged.push(p); continue; }
-    const last = merged[merged.length-1];
-    if (Math.abs(p.twoTheta - last.twoTheta) < 0.1) { // si están muy cerca, conservar el mayor
-      if (p.intensity > last.intensity) merged[merged.length-1] = p;
-    } else merged.push(p);
-  }
-  return merged;
-}
-
-// --- chart setup ---
-const ctx = document.getElementById('chart').getContext('2d');
-let chart = new Chart(ctx, {
-  type: 'line',
-  data: { labels: [], datasets: [{ label:'I (a.u.)', data: [], tension:0.15, pointRadius:0 }] },
-  options: { scales: { x: { title: {display:true, text: '2θ (deg)'} }, y: { title: {display:true, text: 'Intensidad'} } }, plugins:{legend:{display:false}} }
-});
-
-// --- DOM handlers ---
-const fileInput = document.getElementById('fileInput');
-const preview = document.getElementById('preview');
-const results = document.getElementById('results');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const sendNetlifyBtn = document.getElementById('sendNetlifyBtn');
-const downloadPyBtn = document.getElementById('downloadPyBtn');
-
-let lastData = null;
-
-fileInput.addEventListener('change', async (e)=>{
-  const f = e.target.files[0];
-  if (!f) { preview.textContent = 'Ningún archivo.'; lastData=null; return; }
-  const txt = await f.text();
-  const parsed = parseASR(txt);
-  if (parsed.xs.length===0) { preview.textContent = 'No se encontraron pares numéricos en el archivo.'; lastData = null; return; }
-  lastData = parsed;
-  preview.textContent = 'Archivo: ' + f.name + '\nPuntos: ' + parsed.xs.length + '\n\nPrimeras 10 líneas:\n' +
-    parsed.xs.slice(0,10).map((x,i)=>`${x}\t${parsed.ys[i]}`).join('\n');
-  // plot
-  chart.data.labels = parsed.xs;
-  chart.data.datasets[0].data = parsed.ys;
-  chart.update();
-  results.textContent = 'Archivo cargado. Pulse "Analizar (local)" o "Enviar a Netlify".';
-});
-
-// local analyze
-analyzeBtn.addEventListener('click', ()=>{
-  if (!lastData) { results.textContent = 'Primero carga un archivo .asr'; return; }
-  const peaks = detectPeaks(lastData.xs, lastData.ys);
-  if (peaks.length===0) { results.textContent = 'No se detectaron picos con el algoritmo básico.'; return; }
-  // format results
-  const lines = peaks.map((p,i)=>`Pico ${i+1}: 2θ=${p.twoTheta.toFixed(4)}°, I=${p.intensity.toFixed(2)}, FWHM≈${p.fwhm.toFixed(4)}°, Área≈${p.area.toFixed(3)}`);
-  results.textContent = lines.join('\n');
-});
-
-// send to Netlify function (if deployed). Netlify function expected at /.netlify/functions/refine
-sendNetlifyBtn.addEventListener('click', async ()=>{
-  if (!lastData) { results.textContent = 'Primero carga un archivo .asr'; return; }
-  results.textContent = 'Enviando a Netlify...';
-  try {
-    const resp = await fetch('/.netlify/functions/refine', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ filename:'uploaded.asr', content: lastData.xs.map((x,i)=>`${x}\t${lastData.ys[i]}`).join('\n') })
-    });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const json = await resp.json();
-    if (json.error) { results.textContent = 'Error del backend: ' + json.error; return; }
-    // show peaks from server
-    results.textContent = 'Respuesta Netlify:\n' + JSON.stringify(json.peaks, null, 2);
-  } catch (err) {
-    results.textContent = 'Error al conectar con Netlify: ' + err;
-  }
-});
-
-// download Mosli.py (plantilla)
-downloadPyBtn.addEventListener('click', ()=>{
-  const py = `# Mosli.py - plantilla básica
-# Requisitos: numpy, scipy (opcional), matplotlib (opcional)
-# Uso: python3 Mosli.py data.asr
-
-import sys
-import numpy as np
-from math import sqrt
-try:
-    from scipy.optimize import curve_fit
-except Exception:
-    curve_fit = None
-
-def load_asr(path):
-    xs=[]; ys=[]
-    with open(path,'r') as f:
-        for line in f:
-            line=line.strip()
-            if not line or line.startswith('#'): continue
-            parts=line.split()
-            if len(parts)<2: continue
-            try:
-                xs.append(float(parts[0])); ys.append(float(parts[1]))
-            except:
-                continue
-    return np.array(xs), np.array(ys)
-
-def gaussian(x, A, x0, sigma):
-    return A * np.exp(-0.5*((x-x0)/sigma)**2)
-
-def find_peaks(xs, ys, rel_threshold=0.12):
-    med = np.median(ys)
-    thr = med + (ys.max()-med)*rel_threshold
-    peaks=[]
-    for i in range(1,len(ys)-1):
-        if ys[i]>ys[i-1] and ys[i]>ys[i+1] and ys[i]>thr:
-            # estimate fwhm by locating where signal drops to half (simple)
-            half = ys[i]/2.0
-            left=i; right=i
-            while left>0 and ys[left]>half: left-=1
-            while right<len(ys)-1 and ys[right]>half: right+=1
-            fwhm = xs[min(len(xs)-1,right)] - xs[max(0,left)]
-            area = np.trapz(ys[max(0,left):min(len(ys),right+1)], xs[max(0,left):min(len(xs),right+1)])
-            peaks.append({'index':i,'twoTheta':float(xs[i]), 'intensity':float(ys[i]), 'fwhm':float(abs(fwhm)), 'area':float(abs(area))})
-    return peaks
-
-def main():
-    if len(sys.argv)<2:
-        print('Usar: python3 Mosli.py data.asr')
-        return
-    xs, ys = load_asr(sys.argv[1])
-    peaks = find_peaks(xs, ys)
-    print('Picos encontrados:')
-    for p in peaks:
-        print(p)
-
-if __name__=='__main__':
-    main()
-`;
-  const blob = new Blob([py], {type:'text/x-python'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'Mosli.py'; document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
-});
-
-// --- video handling: ocultar video y mostrar app al terminar ---
-const vid = document.getElementById('introVideo');
-vid.addEventListener('ended', ()=> {
-  vid.style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-});
-// also allow skipping by click
-vid.addEventListener('click', ()=> {
-  vid.pause();
-  vid.style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-});
-
-// autoplay note: many navegators requieren muted para autoplay; el atributo muted ya está puesto.
-</script>
+  <script src="js/app.js"></script>
 </body>
 </html>
