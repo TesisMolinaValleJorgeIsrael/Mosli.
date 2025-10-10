@@ -1,6 +1,98 @@
-// app.js — frontend mejorado (XRD preview + operaciones básicas tipo FullProf)
+// js/app.js — integra reproducción inicial del video (una vez) + UI (análisis XRD)
+// Basado en tu UI previa: parsing .asr, smoothing, baseline, detección picos, ajuste simple
 (() => {
-  // Elementos
+  /************ Part A: manejo del video inicial (reproducir una sola vez) ************/
+  const video = document.getElementById('bgVideo');
+  const overlay = document.getElementById('videoOverlay');
+  const playBtn = document.getElementById('playBtn');
+  const playNoFsBtn = document.getElementById('playNoFsBtn');
+
+  // Elementos UI principales (ocultos hasta que termine el video)
+  const topbar = document.getElementById('topbar');
+  const sidePanel = document.getElementById('sidePanel');
+  const mainArea = document.getElementById('mainArea');
+
+  function showMainUI() {
+    // Oculta video y overlay y muestra UI
+    try { video.pause(); } catch(e){}
+    if (video && video.parentNode) video.style.display = 'none';
+    overlay.classList.add('hidden');
+    topbar.classList.remove('hidden');
+    sidePanel.classList.remove('hidden');
+    mainArea.classList.remove('hidden');
+  }
+
+  // Intentar autoplay inmediatamente
+  function tryAutoplay() {
+    if (!video) { showMainUI(); return; }
+    const p = video.play();
+    if (p !== undefined) {
+      p.then(() => {
+        // autoplay OK; ocultamos overlay
+        overlay.classList.add('hidden');
+      }).catch((err) => {
+        // Autoplay bloqueado -> mostrar overlay
+        overlay.classList.remove('hidden');
+      });
+    } else {
+      // No promesa — esconder overlay después de un rato
+      setTimeout(()=> overlay.classList.add('hidden'), 300);
+    }
+  }
+
+  // Botones overlay
+  async function playAndFullscreen() {
+    try {
+      await video.play();
+      // request fullscreen en documentElement (el usuario hizo clic)
+      const el = document.documentElement;
+      if (el.requestFullscreen) await el.requestFullscreen();
+    } catch (err) {
+      console.warn('No se pudo entrar en fullscreen o reproducir:', err);
+    } finally {
+      overlay.classList.add('hidden');
+    }
+  }
+  async function playNoFullscreen() {
+    try {
+      await video.play();
+    } catch (err) {
+      console.warn('No se pudo reproducir:', err);
+    } finally {
+      overlay.classList.add('hidden');
+    }
+  }
+
+  // Cuando el video termine, mostramos la UI principal
+  if (video) {
+    video.addEventListener('ended', () => {
+      showMainUI();
+    });
+    video.addEventListener('play', () => {
+      // Si se pudo reproducir por autoplay, ocultamos overlay
+      overlay.classList.add('hidden');
+    });
+  }
+
+  playBtn && playBtn.addEventListener('click', async (e) => { e.preventDefault(); await playAndFullscreen(); });
+  playNoFsBtn && playNoFsBtn.addEventListener('click', async (e) => { e.preventDefault(); await playNoFullscreen(); });
+
+  // reintento de autoplay si el usuario interactúa
+  function onFirstUserInteraction() {
+    tryAutoplay();
+    window.removeEventListener('click', onFirstUserInteraction);
+    window.removeEventListener('keydown', onFirstUserInteraction);
+    window.removeEventListener('touchstart', onFirstUserInteraction);
+  }
+  window.addEventListener('click', onFirstUserInteraction);
+  window.addEventListener('keydown', onFirstUserInteraction);
+  window.addEventListener('touchstart', onFirstUserInteraction);
+
+  // Intentamos autoplay ahora
+  tryAutoplay();
+
+  /************ Part B: interfaz XRD (igual que antes, activada tras video) ************/
+  // Elementos UI
   const fileInput = document.getElementById('fileInput');
   const fileNameLabel = document.getElementById('fileName');
   const logEl = document.getElementById('log');
@@ -16,7 +108,6 @@
   const estimatePeakBtn = document.getElementById('estimatePeak');
   const fitPeakBtn = document.getElementById('fitPeak');
   const togglePanel = document.getElementById('togglePanel');
-  const sidePanel = document.getElementById('sidePanel');
   const xrdCanvas = document.getElementById('xrdChart');
   const exportJson = document.getElementById('exportJson');
   const sendBackend = document.getElementById('sendBackend');
@@ -41,7 +132,6 @@
     const lines = txt.split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^#/.test(l));
     const xs = [], ys = [];
     for (const line of lines) {
-      // aceptar delimitadores espacios o comas
       const parts = line.replace(/\s+/g, ' ').split(/[\s,]+/).filter(Boolean);
       if (parts.length >= 2) {
         const a = parseFloat(parts[0]);
@@ -71,12 +161,10 @@
 
   // baseline polynomial fit (least squares) deg 0..2
   function baselinePolyFit(x, y, deg=2) {
-    // Build Vandermonde and solve normal equations (small deg)
     const n = x.length;
     const m = deg + 1;
     const A = new Array(m).fill(0).map(()=>new Array(m).fill(0));
     const b = new Array(m).fill(0);
-    // compute sums
     const xPows = new Array(2*deg + 1).fill(0);
     for (let i=0;i<n;i++) {
       let xi = 1;
@@ -87,18 +175,13 @@
     }
     for (let row=0;row<m;row++) {
       for (let col=0;col<m;col++) A[row][col] = xPows[row+col];
-      // rhs
       let s = 0;
       for (let i=0;i<n;i++) s += y[i] * Math.pow(x[i], row);
       b[row] = s;
     }
-    // Solve Ax=b by Gaussian elimination (m small)
     const M = m;
-    // augment
     for (let i=0;i<M;i++) A[i].push(b[i]);
-    // elimination
     for (let i=0;i<M;i++) {
-      // pivot
       let maxR = i;
       for (let r=i+1;r<M;r++) if (Math.abs(A[r][i]) > Math.abs(A[maxR][i])) maxR=r;
       const tmp = A[i]; A[i] = A[maxR]; A[maxR] = tmp;
@@ -113,7 +196,7 @@
     }
     const coeffs = new Array(M).fill(0);
     for (let i=0;i<M;i++) coeffs[i] = A[i][M];
-    return coeffs; // coeffs[0] + coeffs[1]*x + ...
+    return coeffs;
   }
 
   function evaluatePoly(coeffs, x) {
@@ -130,9 +213,7 @@
     const threshold = Math.max(0, mean * opts.thresholdFactor);
     for (let i=1;i<n-1;i++){
       if (y[i] > y[i-1] && y[i] > y[i+1] && y[i] >= threshold) {
-        // ensure minDistance
         if (peaks.length && Math.abs(i-peaks[peaks.length-1].index) < opts.minDistance) {
-          // keep higher
           if (y[i] > peaks[peaks.length-1].y) peaks[peaks.length-1] = {index:i, y:y[i]};
         } else {
           peaks.push({index:i, y:y[i]});
@@ -142,11 +223,10 @@
     return peaks;
   }
 
-  // estimate gaussian params around a peak (no heavy optimization)
+  // estimate gaussian params around a peak
   function estimateGaussian(xArr, yArr, idx) {
     const x0 = xArr[idx];
     const amp = yArr[idx];
-    // estimate width: find points at ~half max
     const half = amp / 2;
     let left = idx, right = idx;
     while (left>0 && yArr[left] > half) left--;
@@ -156,18 +236,13 @@
     return {amp, x0, sigma};
   }
 
-  // gaussian function
   function gaussian(x, amp, x0, sigma) {
     return amp * Math.exp(-0.5 * Math.pow((x - x0)/sigma, 2));
   }
 
-  // simple local refinement by numeric gradient descent on parameters amp, x0, sigma
   function refineGaussian(xArr, yArr, init, windowRadius = 12) {
-    // select window around center
     const n = xArr.length;
-    // find closest index to init.x0
-    let idx = 0;
-    let bestDiff = Infinity;
+    let idx = 0; let bestDiff = Infinity;
     for (let i=0;i<n;i++){
       const d = Math.abs(xArr[i] - init.x0);
       if (d < bestDiff){ bestDiff = d; idx = i; }
@@ -180,10 +255,8 @@
     let amp = init.amp || Math.max(...ys);
     let x0 = init.x0 || xs[Math.floor(xs.length/2)];
     let sigma = init.sigma || ( (xs[xs.length-1]-xs[0]) / 6 ) || 0.5;
-    // gradient descent
     const lr = 0.03;
     for (let iter=0; iter<120; iter++) {
-      // compute residuals and gradients by finite differences
       let loss = 0;
       let g_amp = 0, g_x0 = 0, g_sigma = 0;
       for (let i=0;i<xs.length;i++) {
@@ -192,17 +265,14 @@
         const yi_pred = gaussian(xi, amp, x0, sigma);
         const err = yi_pred - yi;
         loss += err*err;
-        // analytic gradients
         g_amp += 2*err * Math.exp(-0.5*Math.pow((xi-x0)/sigma,2));
         const common = 2*err * amp * Math.exp(-0.5*Math.pow((xi-x0)/sigma,2));
         g_x0 += common * ( (xi - x0) / (sigma*sigma) );
         g_sigma += common * ( Math.pow(xi - x0,2) / (sigma*sigma*sigma) );
       }
-      // update (normalized)
       amp -= lr * g_amp / xs.length;
       x0  -= lr * g_x0 / xs.length;
       sigma -= lr * g_sigma / xs.length;
-      // clamp
       if (sigma < 1e-3) sigma = 1e-3;
     }
     return {amp, x0, sigma};
@@ -215,7 +285,7 @@
     chart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: x, // x-values (angles)
+        labels: x,
         datasets: [
           { label: 'Observado', data: y, tension: 0.1, borderWidth: 1.5, pointRadius: 0, parsing: { xAxisKey: null, yAxisKey: null } }
         ]
@@ -237,15 +307,14 @@
           }
         },
         onClick: (evt, elements) => {
-          // detect nearest point index to click and see if it's close to a peak
           const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, false);
           if (points.length) {
             const idx = points[0].index;
-            // check if this index is near any detected peak
             const p = peaks.find(pk => Math.abs(pk.index - idx) <= 3);
             if (p) {
-              selectedPeak = { index: p.index, x: x[p.index], y: y[p.index] };
+              selectedPeak = { index: p.index, x: rawX[p.index], y: rawY[p.index] };
               updatePeakInfo();
+              overlayPeaksAndFits();
             }
           }
         }
@@ -253,24 +322,17 @@
     });
   }
 
-  // overlay peaks and fitted curves
   function overlayPeaksAndFits() {
     if (!chart) return;
-    // remove any extra datasets except the first (observed)
     while (chart.data.datasets.length > 1) chart.data.datasets.pop();
 
-    // add baseline
     if (baseline) {
       const baselineY = rawX.map(xv => evaluatePoly(baseline, xv));
       chart.data.datasets.push({ label: 'Baseline', data: baselineY, borderDash: [6,4], pointRadius:0, borderWidth:1 });
     }
-
-    // add processed (procY) if differs
     if (procY && procY.length) {
       chart.data.datasets.push({ label: 'Procesado', data: procY, tension:0.1, borderWidth:1, pointRadius:0, borderColor: '#ffcc66' });
     }
-
-    // peaks markers
     for (const pk of peaks) {
       chart.data.datasets.push({
         label: `Pico @ ${rawX[pk.index].toFixed(3)}`,
@@ -280,14 +342,11 @@
         backgroundColor:'#ff6b6b'
       });
     }
-
-    // if selected peak and fitted params exist, overlay gaussian
     if (selectedPeak && selectedPeak.fit) {
       const params = selectedPeak.fit;
       const yfit = rawX.map(xv => gaussian(xv, params.amp, params.x0, params.sigma));
       chart.data.datasets.push({ label: 'Fit (gauss)', data: yfit, borderWidth:2, pointRadius:0, borderColor:'#78e08f' });
     }
-
     chart.update('none');
   }
 
@@ -296,12 +355,12 @@
   peakThresh.addEventListener('input', ()=> { peakThreshVal.textContent = parseFloat(peakThresh.value).toFixed(2); });
 
   // Toggle panel
-  togglePanel.addEventListener('click', ()=> {
+  togglePanel && togglePanel.addEventListener('click', ()=> {
     sidePanel.style.display = (sidePanel.style.display === 'none') ? 'block' : 'none';
   });
 
   // File handling
-  fileInput.addEventListener('change', async (e) => {
+  fileInput && fileInput.addEventListener('change', async (e) => {
     const f = e.target.files[0];
     if (!f) return;
     fileNameLabel.textContent = f.name;
@@ -321,7 +380,7 @@
   });
 
   // Preprocesado
-  applySmoothBtn.addEventListener('click', () => {
+  applySmoothBtn && applySmoothBtn.addEventListener('click', () => {
     if (!rawY.length) return;
     const w = parseInt(smoothWindow.value, 10);
     procY = smoothArray(procY.length ? procY : rawY, w);
@@ -330,18 +389,17 @@
     log(`Aplicado smoothing (window=${w})`);
   });
 
-  applyBaselineBtn.addEventListener('click', () => {
+  applyBaselineBtn && applyBaselineBtn.addEventListener('click', () => {
     if (!rawX.length) return;
     const deg = parseInt(baselineDeg.value, 10);
     baseline = baselinePolyFit(rawX, procY.length ? procY : rawY, deg);
-    // subtract baseline
     procY = rawX.map((xx,i) => (rawY[i] - evaluatePoly(baseline, xx)));
     createChart(rawX, procY);
     overlayPeaksAndFits();
     log(`Baseline restada (deg=${deg}).`);
   });
 
-  resetBaselineBtn.addEventListener('click', () => {
+  resetBaselineBtn && resetBaselineBtn.addEventListener('click', () => {
     baseline = null;
     procY = rawY.slice();
     createChart(rawX, procY);
@@ -350,7 +408,7 @@
   });
 
   // Detect peaks
-  detectPeaksBtn.addEventListener('click', () => {
+  detectPeaksBtn && detectPeaksBtn.addEventListener('click', () => {
     if (!procY.length) return;
     const factor = parseFloat(peakThresh.value);
     const detected = detectPeaks(procY, { thresholdFactor: factor, minDistance: Math.max(3, Math.floor(rawX.length/400)) });
@@ -360,7 +418,7 @@
   });
 
   // estimate peak params automatically for selected peak
-  estimatePeakBtn.addEventListener('click', () => {
+  estimatePeakBtn && estimatePeakBtn.addEventListener('click', () => {
     if (!peaks.length) { log('No hay picos detectados'); return; }
     selectedPeak = { index: peaks[0].index, x: rawX[peaks[0].index], y: rawY[peaks[0].index] };
     const est = estimateGaussian(rawX, procY, selectedPeak.index);
@@ -371,7 +429,7 @@
   });
 
   // fit single peak (refine)
-  fitPeakBtn.addEventListener('click', () => {
+  fitPeakBtn && fitPeakBtn.addEventListener('click', () => {
     if (!selectedPeak) { log('Selecciona un pico primero (clic sobre un marcador)'); return; }
     const init = selectedPeak.fit || estimateGaussian(rawX, procY, selectedPeak.index);
     log(`Refinando pico @ ${init.x0.toFixed(4)} ...`);
@@ -383,7 +441,7 @@
   });
 
   function updatePeakInfo() {
-    const peakInfo = document.getElementById('peakInfo') || document.createElement('div');
+    const peakInfo = document.getElementById('peakInfo');
     if (!selectedPeak) {
       peakInfo.textContent = 'Ningún pico seleccionado';
     } else {
@@ -393,14 +451,10 @@
         peakInfo.innerHTML += `Fit → x0: ${p.fit.x0.toFixed(4)}, amp: ${p.fit.amp.toFixed(2)}, σ: ${p.fit.sigma.toFixed(4)}`;
       }
     }
-    const container = document.getElementById('peakInfo');
-    if (container) container.innerHTML = peakInfo.innerHTML;
   }
 
-  // click handling inside chart is provided by Chart.js onClick earlier
-
   // Export JSON
-  exportJson.addEventListener('click', () => {
+  exportJson && exportJson.addEventListener('click', () => {
     if (!rawX.length) { log('Nada que exportar.'); return; }
     const payload = {
       meta: { created: new Date().toISOString() },
@@ -420,7 +474,7 @@
   });
 
   // Send to Netlify (multipart/form-data)
-  sendBackend.addEventListener('click', async () => {
+  sendBackend && sendBackend.addEventListener('click', async () => {
     if (!fileInput.files.length) { log('Sube primero tu .asr'); return; }
     const f = fileInput.files[0];
     log('Preparando envío al backend (Netlify Function)...');
@@ -447,14 +501,14 @@
   });
 
   // Download chart as PNG
-  downloadPNG.addEventListener('click', () => {
+  downloadPNG && downloadPNG.addEventListener('click', () => {
     if (!chart) return;
     const url = chart.toBase64Image();
     const a = document.createElement('a'); a.href=url; a.download='xrd_plot.png'; a.click();
   });
 
-  // initial blank chart
+  // inicializar chart vacío (evita errores antes de carga)
   createChart([0,1], [0,0]);
-  log('Interfaz lista. Carga un archivo .asr para comenzar.');
+  log('Interfaz lista. El video de introducción se reproduce al inicio.');
 
 })();
