@@ -4,6 +4,7 @@
   --bgglass: rgba(10,10,12,0.55);
   --panel-w: 360px;
   --radius:12px;
+  --transition-duration: 800ms;
 }
 
 *{box-sizing:border-box}
@@ -11,19 +12,28 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-s
 body{overflow:auto;background:#000}
 .hidden { display: none !important; }
 
-/* VIDEO: ahora con z-index ALTO para aparecer al frente */
+/* VIDEO: ahora con z-index ALTO para aparecer al frente y transición de opacidad */
 .bg-video{
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 1000;    /* <-- MUY IMPORTANTE: video al frente */
+  z-index: 1000;    /* video al frente */
   background: black;
   display:block;
+  opacity: 1;
+  transition: opacity var(--transition-duration) ease;
+  will-change: opacity;
 }
 
-/* Overlay: sobre el video */
+/* Clase para hacer fade-out */
+.bg-video.fade-out{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Overlay: sobre el video (también con transición) */
 .video-overlay{
   position: fixed;
   inset: 0;
@@ -32,7 +42,13 @@ body{overflow:auto;background:#000}
   justify-content: center;
   z-index: 1100;    /* overlay encima del video */
   background: rgba(0,0,0,0.45);
+  opacity: 1;
+  transition: opacity var(--transition-duration) ease, visibility var(--transition-duration) ease;
+  visibility: visible;
 }
+.video-overlay.hidden{ opacity: 0; visibility: hidden; }
+
+/* Overlay card (no cambia) */
 .overlay-card{
   background: rgba(10,10,12,0.92);
   padding: 18px;
@@ -52,7 +68,20 @@ button{
 .secondary{ background: rgba(255,255,255,0.06); color:#fff; border: 1px solid rgba(255,255,255,0.08); }
 .small{ padding:6px 8px; font-size:0.87rem; border-radius:8px; background: linear-gradient(180deg,var(--accent),var(--accent-2)); }
 
-/* Topbar — z-index menor que el video (para que el video la cubra inicialmente) */
+/* UI hidden/visible states with smooth fade */
+.ui-hidden{
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity var(--transition-duration) ease, transform var(--transition-duration) ease, visibility var(--transition-duration) ease;
+}
+.ui-visible{
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: translateY(0) !important;
+}
+
+/* Topbar (bajo el video) */
 .topbar{
   position:fixed;left:0;right:0;top:0;height:56px;padding:8px 16px;display:flex;align-items:center;gap:12px;
   background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
