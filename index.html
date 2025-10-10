@@ -1,121 +1,115 @@
-:root{
-  --accent:#1e88e5;  /* azul */
-  --accent-2:#42a5f5;
-  --bgglass: rgba(10,10,12,0.55);
-  --panel-w: 360px;
-  --radius:12px;
-  --transition-duration: 800ms;
-}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>XRD Mini-FullProf — Frontend</title>
 
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#000;color:#fff}
-body{overflow:auto;background:#000}
-.hidden { display: none !important; }
+  <!-- Chart.js + plugin zoom -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 
-/* VIDEO: ahora con z-index ALTO para aparecer al frente y transición de opacidad */
-.bg-video{
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  z-index: 1000;    /* video al frente */
-  background: black;
-  display:block;
-  opacity: 1;
-  transition: opacity var(--transition-duration) ease;
-  will-change: opacity;
-}
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- VIDEO: reproduce una sola vez al inicio; ocupa todo el viewport y está en el frente -->
+  <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="auto">
+    <source src="static/anima.mp4" type="video/mp4" />
+    Tu navegador no soporta video HTML5.
+  </video>
 
-/* Clase para hacer fade-out */
-.bg-video.fade-out{
-  opacity: 0;
-  pointer-events: none;
-}
+  <!-- Overlay (si autoplay es bloqueado) - encima del video -->
+  <div id="videoOverlay" class="video-overlay hidden">
+    <div class="overlay-card">
+      <p>Presiona para reproducir la introducción</p>
+      <div class="overlay-actions">
+        <button id="playBtn" class="primary">Reproducir (fullscreen)</button>
+        <button id="playNoFsBtn" class="secondary">Reproducir (sin fullscreen)</button>
+      </div>
+      <small class="muted">Si el video no inicia automáticamente, pulsa aquí.</small>
+    </div>
+  </div>
 
-/* Overlay: sobre el video (también con transición) */
-.video-overlay{
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;    /* overlay encima del video */
-  background: rgba(0,0,0,0.45);
-  opacity: 1;
-  transition: opacity var(--transition-duration) ease, visibility var(--transition-duration) ease;
-  visibility: visible;
-}
-.video-overlay.hidden{ opacity: 0; visibility: hidden; }
+  <!-- Barra superior, panel lateral y main (ocultos hasta que termine el video) -->
+  <header id="topbar" class="topbar ui-hidden">
+    <button id="togglePanel" class="icon-btn">☰</button>
+    <h1>XRD Refinement Studio — Mini-FullProf</h1>
+    <div class="right">
+      <button id="resetZoom" class="small">Reset zoom</button>
+      <button id="exportJson" class="small">Export JSON</button>
+      <button id="sendBackend" class="primary small">Enviar a Netlify</button>
+    </div>
+  </header>
 
-/* Overlay card (no cambia) */
-.overlay-card{
-  background: rgba(10,10,12,0.92);
-  padding: 18px;
-  border-radius: 12px;
-  text-align: center;
-  color: #fff;
-  min-width: 280px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-}
-.overlay-actions{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+  <aside id="sidePanel" class="sidepanel ui-hidden">
+    <section class="panel-section">
+      <h2>Archivo</h2>
+      <input id="fileInput" type="file" accept=".asr,.txt,.xy" />
+      <div id="fileName" class="muted small">Ningún archivo seleccionado</div>
+    </section>
 
-/* Botones — AZUL con texto blanco */
-button{
-  appearance:none;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700;color:#fff;
-}
-.primary{ background: linear-gradient(90deg,var(--accent),var(--accent-2)); }
-.secondary{ background: rgba(255,255,255,0.06); color:#fff; border: 1px solid rgba(255,255,255,0.08); }
-.small{ padding:6px 8px; font-size:0.87rem; border-radius:8px; background: linear-gradient(180deg,var(--accent),var(--accent-2)); }
+    <section class="panel-section">
+      <h2>Preprocesado</h2>
+      <label>Smoothing</label>
+      <input id="smoothWindow" type="range" min="1" max="51" step="2" value="5" />
+      <div class="row between">
+        <small>Ventana: <span id="smoothVal">5</span></small>
+        <button id="applySmooth" class="small">Aplicar</button>
+      </div>
 
-/* UI hidden/visible states with smooth fade */
-.ui-hidden{
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(6px);
-  transition: opacity var(--transition-duration) ease, transform var(--transition-duration) ease, visibility var(--transition-duration) ease;
-}
-.ui-visible{
-  opacity: 1 !important;
-  visibility: visible !important;
-  transform: translateY(0) !important;
-}
+      <label>Baseline (grado)</label>
+      <select id="baselineDeg">
+        <option value="0">0 (offset)</option>
+        <option value="1">1 (linear)</option>
+        <option value="2" selected>2 (quadrática)</option>
+      </select>
+      <div class="row between">
+        <button id="applyBaseline" class="small">Restar baseline</button>
+        <button id="resetBaseline" class="small">Reset</button>
+      </div>
+    </section>
 
-/* Topbar (bajo el video) */
-.topbar{
-  position:fixed;left:0;right:0;top:0;height:56px;padding:8px 16px;display:flex;align-items:center;gap:12px;
-  background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
-  backdrop-filter: blur(6px);z-index:20; /* debajo del video */
-}
-.topbar h1{font-size:1rem;margin:0}
-.icon-btn{font-size:1.1rem;padding:8px;border-radius:8px;border:0;background:transparent;color:var(--accent);cursor:pointer}
-.topbar .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+    <section class="panel-section">
+      <h2>Detección de picos</h2>
+      <label>Umbral relativo</label>
+      <input id="peakThresh" type="range" min="0" max="2" step="0.01" value="0.2" />
+      <div class="row between">
+        <small>Factor: <span id="peakThreshVal">0.20</span></small>
+        <button id="detectPeaks" class="small">Detectar</button>
+      </div>
+      <div class="muted small">Clic en un pico (en la gráfica) para seleccionarlo.</div>
+    </section>
 
-/* Sidebar */
-.sidepanel{
-  position:fixed;left:16px;top:76px;width:var(--panel-w);padding:12px;border-radius:var(--radius);
-  background:var(--bgglass);box-shadow:0 10px 30px rgba(0,0,0,0.6);z-index:18;max-height:calc(100% - 96px);overflow:auto;
-}
-.panel-section{margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:8px}
-.panel-section h2{margin:0 0 8px 0;font-size:0.95rem}
-.muted{opacity:0.78}
+    <section class="panel-section">
+      <h2>Fit (seleccionado)</h2>
+      <div id="peakInfo" class="muted small">Ningún pico seleccionado</div>
+      <div class="row">
+        <button id="estimatePeak" class="small">Estim. automática</button>
+        <button id="fitPeak" class="small">Ajustar</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="downloadPNG" class="small">Descargar gráfico</button>
+      </div>
+    </section>
 
-/* Main layout */
-.main{margin-top:72px;margin-left:400px;padding:20px;display:flex;gap:18px;align-items:flex-start}
-.canvas-card{flex:1;padding:12px;border-radius:10px;backdrop-filter: blur(4px);box-shadow:0 6px 20px rgba(0,0,0,0.6)}
-.white-card{background:#ffffff;color:#000}
-.canvas-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-canvas { width:100% !important; height:520px !important; display:block; background:#fff; border-radius:6px; }
+    <footer class="muted small">Frontend: pruebas. Backend: Netlify Function / API Python.</footer>
+  </aside>
 
-/* results panel */
-.results-panel{width:380px;background:rgba(0,0,0,0.22);padding:12px;border-radius:10px;max-height:70vh;overflow:auto}
-.row{display:flex;gap:8px;align-items:center}
-.row.between{display:flex;justify-content:space-between;align-items:center}
-.log{white-space:pre-wrap;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;min-height:120px}
+  <main id="mainArea" class="main ui-hidden">
+    <div class="canvas-card white-card">
+      <div class="canvas-header">
+        <h2>Patrón XRD</h2>
+        <small class="muted">Use rueda del mouse o gesto pinch para hacer zoom; arrastrar para pan.</small>
+      </div>
+      <canvas id="xrdChart"></canvas>
+    </div>
 
-/* Responsive */
-@media (max-width:1000px){
-  .main{margin-left:20px;flex-direction:column;}
-  .sidepanel{position:relative;top:auto;left:auto;width:100%;margin:12px}
-  .topbar h1{display:none}
-}
+    <div id="resultsPanel" class="results-panel">
+      <h3>Resultados / Log</h3>
+      <pre id="log" class="log">Cargue un archivo .asr para comenzar.</pre>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
