@@ -1,4 +1,4 @@
-/* styles.css (corregido y con botones azules) */
+/* styles.css corregido */
 :root{
   --accent:#1e88e5;  /* azul */
   --accent-2:#42a5f5;
@@ -7,26 +7,25 @@
   --radius:12px;
 }
 
-/* utilidad */
-.hidden { display: none !important; }
-
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#000;color:#fff}
+body{overflow:auto;background:#000} /* fondo negro */
 
-/* Video: ocupa toda la ventana visualmente */
+.hidden { display: none !important; }
+
+/* VIDEO: ocupa todo el viewport y no deja barras negras */
 .bg-video{
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  z-index: -2;
+  inset: 0;                 /* top:0; right:0; bottom:0; left:0; */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;        /* recorta y llena la pantalla manteniendo aspecto */
+  z-index: -1;
   background: black;
-  filter: brightness(0.7);
+  display:block;
 }
 
-/* Overlay para pedir interacción si autoplay falla */
+/* Overlay para interacción si autoplay falla */
 .video-overlay{
   position: fixed;
   inset: 0;
@@ -36,9 +35,6 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-s
   z-index: 50;
   background: rgba(0,0,0,0.45);
 }
-
-.video-overlay.hidden{ display: none; }
-
 .overlay-card{
   background: rgba(10,10,12,0.92);
   padding: 18px;
@@ -48,47 +44,15 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-s
   min-width: 280px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.6);
 }
-
 .overlay-actions{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
 
+/* Botones — AZUL con texto blanco */
 button{
-  appearance:none;
-  border:0;
-  padding:8px 10px;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:600;
-  color:#fff;
-  background: var(--accent);
+  appearance:none;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;font-weight:700;color:#fff;
 }
-
-/* Small buttons (sidebar) */
-.small{
-  padding:6px 8px;
-  font-size:0.87rem;
-  border-radius:8px;
-  background: linear-gradient(180deg,var(--accent),var(--accent-2));
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-/* Primary style (azul más marcado) */
-.primary{
-  background: linear-gradient(90deg,var(--accent),var(--accent-2));
-  color: #fff;
-  border: none;
-  padding:8px 12px;
-  border-radius:8px;
-}
-
-/* Secondary (pocas acciones) */
-.secondary{
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-  border-radius:8px;
-  padding:8px 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-}
+.primary{ background: linear-gradient(90deg,var(--accent),var(--accent-2)); }
+.secondary{ background: rgba(255,255,255,0.06); color:#fff; border: 1px solid rgba(255,255,255,0.08); }
+.small{ padding:6px 8px; font-size:0.87rem; border-radius:8px; background: linear-gradient(180deg,var(--accent),var(--accent-2)); }
 
 /* Topbar */
 .topbar{
@@ -107,12 +71,16 @@ button{
 }
 .panel-section{margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:8px}
 .panel-section h2{margin:0 0 8px 0;font-size:0.95rem}
-.muted{opacity:0.75}
-.small{font-size:0.85rem;padding:6px 8px;border-radius:8px}
+.muted{opacity:0.78}
 
 /* Main layout */
 .main{margin-top:72px;margin-left:400px;padding:20px;display:flex;gap:18px;align-items:flex-start}
-.canvas-card{flex:1;background:rgba(0,0,0,0.24);padding:14px;border-radius:10px;backdrop-filter: blur(4px);box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+.canvas-card{flex:1;padding:12px;border-radius:10px;backdrop-filter: blur(4px);box-shadow:0 6px 20px rgba(0,0,0,0.6)}
+.white-card{background:#ffffff;color:#000} /* CUADRO BLANCO */
+.canvas-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+canvas { width:100% !important; height:520px !important; display:block; background:#fff; border-radius:6px; }
+
+/* results panel */
 .results-panel{width:380px;background:rgba(0,0,0,0.22);padding:12px;border-radius:10px;max-height:70vh;overflow:auto}
 .row{display:flex;gap:8px;align-items:center}
 .row.between{display:flex;justify-content:space-between;align-items:center}
