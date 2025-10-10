@@ -1,55 +1,38 @@
-/* styles.css corregido — video al frente + fade-out */
 :root{
-  --accent:#1e88e5;
+  --accent:#1e88e5;  /* azul */
   --accent-2:#42a5f5;
   --bgglass: rgba(10,10,12,0.55);
   --panel-w: 360px;
   --radius:12px;
 }
 
-/* utilidades */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:#000;color:#fff}
+body{overflow:auto;background:#000}
 .hidden { display: none !important; }
 
-/* VIDEO: ahora con z-index alto para estar al frente al inicio.
-   También definimos la clase .fade-out para hacer la transición al esconder. */
+/* VIDEO: ahora con z-index ALTO para aparecer al frente */
 .bg-video{
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  z-index: 9999;           /* <-- muy arriba para aparecer al frente */
+  z-index: 1000;    /* <-- MUY IMPORTANTE: video al frente */
   background: black;
   display:block;
-  opacity: 1;
-  transition: opacity 600ms ease; /* para fade-out suave */
-  pointer-events: none;    /* evita capturar clicks detrás del overlay; overlay captura interacción */
 }
 
-/* cuando queremos ocultar con transición, agregamos esta clase */
-.bg-video.fade-out{
-  opacity: 0;
-  /* después de la transición JS pondrá display:none */
-}
-
-/* Overlay para interacción si autoplay falla — encima del video */
+/* Overlay: sobre el video */
 .video-overlay{
   position: fixed;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;          /* <-- encima del video */
+  z-index: 1100;    /* overlay encima del video */
   background: rgba(0,0,0,0.45);
-  transition: opacity 400ms ease;
-  opacity: 1;
 }
-.video-overlay.hidden{ opacity: 0; pointer-events: none; display: none; }
-.video-overlay.fade-out{ opacity: 0; pointer-events: none; }
-
-/* Overlay card */
 .overlay-card{
   background: rgba(10,10,12,0.92);
   padding: 18px;
@@ -69,11 +52,11 @@ button{
 .secondary{ background: rgba(255,255,255,0.06); color:#fff; border: 1px solid rgba(255,255,255,0.08); }
 .small{ padding:6px 8px; font-size:0.87rem; border-radius:8px; background: linear-gradient(180deg,var(--accent),var(--accent-2)); }
 
-/* Topbar */
+/* Topbar — z-index menor que el video (para que el video la cubra inicialmente) */
 .topbar{
   position:fixed;left:0;right:0;top:0;height:56px;padding:8px 16px;display:flex;align-items:center;gap:12px;
   background:linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.15));
-  backdrop-filter: blur(6px);z-index:20;
+  backdrop-filter: blur(6px);z-index:20; /* debajo del video */
 }
 .topbar h1{font-size:1rem;margin:0}
 .icon-btn{font-size:1.1rem;padding:8px;border-radius:8px;border:0;background:transparent;color:var(--accent);cursor:pointer}
