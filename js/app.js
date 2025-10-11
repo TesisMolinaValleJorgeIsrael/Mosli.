@@ -1,21 +1,3 @@
-// Cuadro 1.
-
-// Cuadro 2.
-
-// Cuadro 3.
-
-// Cuadro 4.
-
-// Cuadro 5.
-
-// Cuadro 6.
-
-
-
-
-
-
-
 // Setup chart with stronger interactivity
 const ctx = document.getElementById('xrdChart').getContext('2d');
 let gridVisible = true;
@@ -54,11 +36,6 @@ function log(msg){
   p.scrollTop = p.scrollHeight;
 }
 
-
-
-
-
-
 // File parsing and plotting
 document.getElementById('fileInput').addEventListener('change', e => {
   const file = e.target.files[0];
@@ -82,6 +59,9 @@ document.getElementById('fileInput').addEventListener('change', e => {
   reader.readAsText(file);
 });
 
+document.getElementById('btnProcesar').onclick=()=>log('Procesando datos...');
+document.getElementById('btnPicos').onclick=()=>log('Detectando picos...');
+document.getElementById('btnFit').onclick=()=>log('Ejecutando Fit...');
 
 // Diseño menu
 const drop = document.querySelector('.dropdown');
@@ -168,8 +148,7 @@ document.getElementById('btnMatch').onclick=()=>{
   log('Match simulado con elementos: '+seleccionados.join(','));
 };
 
-
-// Video
+// Splash video handling: autoplay then hide overlay
 const splash = document.getElementById('splash');
 const app = document.getElementById('app');
 const video = document.getElementById('introVideo');
