@@ -1,33 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mosli Patrón De DRX.</title>
-  
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
-
-  <link rel="stylesheet" href="css/styles.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mosli — Refinamiento XRD</title>
+<link rel="stylesheet" href="css/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
 </head>
 <body>
-  <!-- Reproduccion de video  -->
-  <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="auto">
-    <source src="static/anima.mp4" type="video/mp4" />
-    Tu navegador no soporta video HTML5.
-  </video>
-
-  <!-- si el navegador bloquea el  autoplay  -->
-  <div id="videoOverlay" class="video-overlay hidden">
-    <div class="overlay-card">
-      <p>Presiona para reproducir la introducción</p>
-      <div class="overlay-actions">
-        <button id="playBtn" class="primary">Reproducir (fullscreen)</button>
-        <button id="playNoFsBtn" class="secondary">Reproducir (sin fullscreen)</button>
-      </div>
-      <small class="muted">Si el video no inicia automáticamente, pulsa aquí.</small>
-    </div>
+  <!-- Fullscreen splash video -->
+  <div id="splash">
+    <video id="introVideo" src="static/anima.mp4" autoplay muted playsinline></video>
+    <button id="skipBtn">Saltar</button>
   </div>
+  
   <div class="container" id="app" aria-hidden="true">
     
     <!-- Cuadro 1: título -->
