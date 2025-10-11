@@ -3,22 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>XRD Mini-FullProf — Frontend</title>
-
-  <!-- Chart.js + plugin zoom -->
+  <title>Mosli Patrón De DRX.</title>
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"></script>
 
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- VIDEO: reproduce una sola vez al inicio; ocupa todo el viewport y está en el frente -->
+  <!-- Reproduccion de video  -->
   <video id="bgVideo" class="bg-video" autoplay muted playsinline preload="auto">
     <source src="static/anima.mp4" type="video/mp4" />
     Tu navegador no soporta video HTML5.
   </video>
 
-  <!-- Overlay (si autoplay es bloqueado) - encima del video -->
+  <!-- si el navegador bloquea el  autoplay  -->
   <div id="videoOverlay" class="video-overlay hidden">
     <div class="overlay-card">
       <p>Presiona para reproducir la introducción</p>
@@ -29,87 +28,54 @@
       <small class="muted">Si el video no inicia automáticamente, pulsa aquí.</small>
     </div>
   </div>
-
-  <!-- Barra superior, panel lateral y main (ocultos hasta que termine el video) -->
-  <header id="topbar" class="topbar ui-hidden">
-    <button id="togglePanel" class="icon-btn">☰</button>
-    <h1>XRD Refinement Studio — Mini-FullProf</h1>
-    <div class="right">
-      <button id="resetZoom" class="small">Reset zoom</button>
-      <button id="exportJson" class="small">Export JSON</button>
-      <button id="sendBackend" class="primary small">Enviar a Netlify</button>
-    </div>
-  </header>
-
-  <aside id="sidePanel" class="sidepanel ui-hidden">
-    <section class="panel-section">
-      <h2>Archivo</h2>
-      <input id="fileInput" type="file" accept=".asr,.txt,.xy" />
-      <div id="fileName" class="muted small">Ningún archivo seleccionado</div>
-    </section>
-
-    <section class="panel-section">
-      <h2>Preprocesado</h2>
-      <label>Smoothing</label>
-      <input id="smoothWindow" type="range" min="1" max="51" step="2" value="5" />
-      <div class="row between">
-        <small>Ventana: <span id="smoothVal">5</span></small>
-        <button id="applySmooth" class="small">Aplicar</button>
-      </div>
-
-      <label>Baseline (grado)</label>
-      <select id="baselineDeg">
-        <option value="0">0 (offset)</option>
-        <option value="1">1 (linear)</option>
-        <option value="2" selected>2 (quadrática)</option>
-      </select>
-      <div class="row between">
-        <button id="applyBaseline" class="small">Restar baseline</button>
-        <button id="resetBaseline" class="small">Reset</button>
+  <div class="container" id="app" aria-hidden="true">
+    
+    <!-- Cuadro 1: título -->
+    <header id="titulo">
+      <h1>Mosli Patrón De Difracción De Rayos X.</h1>
+    </header>
+    
+    <!-- Cuadro 2: botones -->
+    <section id="controles">
+      <input type="file" id="fileInput" accept=".asr" />
+      <div class="dropdown">
+        <button id="btnDiseno" class="dropdown-toggle">Opciones. ▾</button>
+        <div id="disenoMenu" class="dropdown-menu">
+          <button id="descargarImg">Descargar imagen.</button>
+          <button id="restaurarZoom">Restaurar zoom.</button>
+          <button id="quitarCuadricula">Quitar cuadricula</button>
+          <button id="btnFullscreen">Pantalla completa</button>
+        </div>
       </div>
     </section>
-
-    <section class="panel-section">
-      <h2>Detección de picos</h2>
-      <label>Umbral relativo</label>
-      <input id="peakThresh" type="range" min="0" max="2" step="0.01" value="0.2" />
-      <div class="row between">
-        <small>Factor: <span id="peakThreshVal">0.20</span></small>
-        <button id="detectPeaks" class="small">Detectar</button>
+    
+    <!-- Cuadro 3: gráfico -->
+    <main id="grafica">
+      <div class="grafica-wrap">
+        <canvas id="xrdChart"></canvas>
       </div>
-      <div class="muted small">Clic en un pico (en la gráfica) para seleccionarlo.</div>
+    </main>
+    
+    <!-- Cuadro 4: resultados/log -->
+    <section id="log">
+      <h2>Procesos ejecutados.</h2>
+      <pre id="logText">Esperando documento .asr</pre>
     </section>
+    
+    <!-- Cuadro 5: imagen -->
+    <aside id="imagen">
+      <img src="static/anima.png" alt="Anima" />
+    </aside>
 
-    <section class="panel-section">
-      <h2>Fit (seleccionado)</h2>
-      <div id="peakInfo" class="muted small">Ningún pico seleccionado</div>
-      <div class="row">
-        <button id="estimatePeak" class="small">Estim. automática</button>
-        <button id="fitPeak" class="small">Ajustar</button>
-      </div>
-      <div class="row" style="margin-top:8px;">
-        <button id="downloadPNG" class="small">Descargar gráfico</button>
-      </div>
-    </section>
+    <!-- Cuadro 6: configuración Match -->
+    <aside id="match">
+      <h2>Search–match.</h2>
+      <div id="tablaPeriodica"></div>
+      <label>Filtro de intensidad mínima (%): <input type="number" id="filtroIntensidad" value="10" /></label>
+      <button id="btnMatch">Match.</button>
+    </aside>
+  </div>
 
-    <footer class="muted small">Frontend: pruebas. Backend: Netlify Function / API Python.</footer>
-  </aside>
-
-  <main id="mainArea" class="main ui-hidden">
-    <div class="canvas-card white-card">
-      <div class="canvas-header">
-        <h2>Patrón XRD</h2>
-        <small class="muted">Use rueda del mouse o gesto pinch para hacer zoom; arrastrar para pan.</small>
-      </div>
-      <canvas id="xrdChart"></canvas>
-    </div>
-
-    <div id="resultsPanel" class="results-panel">
-      <h3>Resultados / Log</h3>
-      <pre id="log" class="log">Cargue un archivo .asr para comenzar.</pre>
-    </div>
-  </main>
-
-  <script src="js/app.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
