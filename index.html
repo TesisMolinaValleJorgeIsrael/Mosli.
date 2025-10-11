@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Mosli Patrón De DRX.</title>
+<title>Mosli — Refinamiento XRD</title>
 <link rel="stylesheet" href="css/styles.css" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
@@ -14,41 +14,46 @@
     <video id="introVideo" src="static/anima.mp4" autoplay muted playsinline></video>
     <button id="skipBtn">Saltar</button>
   </div>
-  
+
   <div class="container" id="app" aria-hidden="true">
-    
     <!-- Cuadro 1: título -->
     <header id="titulo">
-      <h1>Mosli Patrón De Difracción De Rayos X.</h1>
+      <h1>Mosli — Refinamiento de Difracción de Rayos X</h1>
     </header>
-    
+
     <!-- Cuadro 2: botones -->
     <section id="controles">
       <input type="file" id="fileInput" accept=".asr" />
+      <button id="btnProcesar">Procesar</button>
+      <button id="btnPicos">Detección de picos</button>
+      <button id="btnFit">Fit (selección)</button>
+
       <div class="dropdown">
-        <button id="btnDiseno" class="dropdown-toggle">Opciones. ▾</button>
+        <button id="btnDiseno" class="dropdown-toggle">Diseño ▾</button>
         <div id="disenoMenu" class="dropdown-menu">
-          <button id="descargarImg">Descargar imagen.</button>
-          <button id="restaurarZoom">Restaurar zoom.</button>
-          <button id="quitarCuadricula">Quitar cuadricula</button>
-          <button id="btnFullscreen">Pantalla completa</button>
+          <button id="descargarImg">1. Descargar imagen.png</button>
+          <button id="restaurarZoom">2. Restaura zoom</button>
+          <button id="quitarCuadricula">3. Quitar cuadricula</button>
         </div>
       </div>
+
+      <button id="btnFullscreen" title="Pantalla completa">Pantalla completa</button>
+      <button id="btnFitData" title="Ajustar a datos">Ajustar a datos</button>
     </section>
-    
+
     <!-- Cuadro 3: gráfico -->
     <main id="grafica">
       <div class="grafica-wrap">
         <canvas id="xrdChart"></canvas>
       </div>
     </main>
-    
+
     <!-- Cuadro 4: resultados/log -->
     <section id="log">
-      <h2>Procesos ejecutados.</h2>
-      <pre id="logText">Esperando documento .asr</pre>
+      <h2>Resultados y Log</h2>
+      <pre id="logText">Esperando datos...</pre>
     </section>
-    
+
     <!-- Cuadro 5: imagen -->
     <aside id="imagen">
       <img src="static/anima.png" alt="Anima" />
@@ -56,10 +61,10 @@
 
     <!-- Cuadro 6: configuración Match -->
     <aside id="match">
-      <h2>Search–match.</h2>
+      <h2>Configuración Match</h2>
       <div id="tablaPeriodica"></div>
       <label>Filtro de intensidad mínima (%): <input type="number" id="filtroIntensidad" value="10" /></label>
-      <button id="btnMatch">Match.</button>
+      <button id="btnMatch">Match</button>
     </aside>
   </div>
 
