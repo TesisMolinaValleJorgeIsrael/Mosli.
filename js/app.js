@@ -1,7 +1,7 @@
-// Setup chart with stronger interactivity
 const ctx = document.getElementById('xrdChart').getContext('2d');
 let gridVisible = true;
 
+//grafica.
 const chart = new Chart(ctx, {
   type: 'line',
   data: { labels: [], datasets: [{ label: 'Intensidad', data: [], borderColor: 'blue', backgroundColor: 'rgba(0,0,0,0)', pointRadius: 0, borderWidth: 1.8 }] },
@@ -24,8 +24,8 @@ const chart = new Chart(ctx, {
       }
     },
     scales: {
-      x: { title: { display: true, text: '2θ', color: '#000' }, ticks: { color: '#000' }, grid: { display: true, color: '#e8e8e8' } },
-      y: { title: { display: true, text: 'Intensidad', color: '#000' }, ticks: { color: '#000' }, grid: { display: true, color: '#e8e8e8' } }
+      x: { title: { display: true, text: '2θ.', color: '#000' }, ticks: { color: '#000' }, grid: { display: true, color: '#e8e8e8' } },
+      y: { title: { display: true, text: 'Intensidad.', color: '#000' }, ticks: { color: '#000' }, grid: { display: true, color: '#e8e8e8' } }
     }
   }
 });
@@ -36,7 +36,9 @@ function log(msg){
   p.scrollTop = p.scrollHeight;
 }
 
-// File parsing and plotting
+
+
+// lectura de archivos .asr 
 document.getElementById('fileInput').addEventListener('change', e => {
   const file = e.target.files[0];
   if(!file) return;
@@ -58,10 +60,6 @@ document.getElementById('fileInput').addEventListener('change', e => {
   };
   reader.readAsText(file);
 });
-
-document.getElementById('btnProcesar').onclick=()=>log('Procesando datos...');
-document.getElementById('btnPicos').onclick=()=>log('Detectando picos...');
-document.getElementById('btnFit').onclick=()=>log('Ejecutando Fit...');
 
 // Diseño menu
 const drop = document.querySelector('.dropdown');
@@ -106,24 +104,20 @@ document.getElementById('btnFullscreen').addEventListener('click', async ()=>{
   }catch(e){ log('Error pantalla completa: '+e); }
 });
 
-// Fit to data: set scales min/max to data extents
-function fitToData(){
-  const data = chart.data.datasets[0].data;
-  if(!data || data.length===0) return;
-  const minY = Math.min(...data);
-  const maxY = Math.max(...data);
-  // x from labels
-  const labels = chart.data.labels.map(v=>Number(v));
-  const minX = Math.min(...labels);
-  const maxX = Math.max(...labels);
-  chart.options.scales.x.min = minX;
-  chart.options.scales.x.max = maxX;
-  chart.options.scales.y.min = Math.max(0, minY - (maxY-minY)*0.05);
-  chart.options.scales.y.max = maxY + (maxY-minY)*0.05;
-  chart.update();
-  log('Ajustado a datos.');
-}
-document.getElementById('btnFitData').addEventListener('click', ()=>fitToData());
+// zoom por rango 
+document.getElementById('btnRangeZoom').addEventListener('click', () => {
+  const xmin = parseFloat(prompt('X min:'));
+  const xmax = parseFloat(prompt('X max:'));
+  const ymin = parseFloat(prompt('Y min:'));
+  const ymax = parseFloat(prompt('Y max:'));
+  if (isNaN(xmin)||isNaN(xmax)||xmin>=xmax||isNaN(ymin)||isNaN(ymax)||ymin>=ymax) {
+    alert('Valores inválidos.');
+    return;
+  }
+  console.log(`Zoom aplicado en -> X:[${xmin}, ${xmax}]  Y:[${ymin}, ${ymax}]`);
+  chart.zoomScale('x',{min:xmin,max:xmax},'default');
+  chart.zoomScale('y',{min:ymin,max:ymax},'default');
+});
 
 // Tabla periódica simple
 const elementos = ['H','He','Li','Be','B','C','N','O','F','Ne','Na','Mg','Al','Si','P','S','Cl','Ar','K','Ca','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn'];
